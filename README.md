@@ -4,9 +4,13 @@ Kotlin language support for [Zed](https://github.com/zed-industries/zed).
 
 ## Language Server
 
-### Kotlin Language Server
+### Kotlin LSP
 
-This extension uses the [Kotlin Language Server](https://github.com/fwcd/kotlin-language-server), which is currently the most stable and actively maintained LSP for Kotlin.
+This extension uses the official [Kotlin LSP](https://github.com/kotlin/kotlin-lsp) from JetBrains. This is the actively maintained, modern language server for Kotlin.
+
+> **Note:** This extension temporarily pins build `263.4421.0` because JetBrains'
+> `RELEASES.md` lags behind actual releases and points at expired builds
+> (see [Kotlin/kotlin-lsp#271](https://github.com/Kotlin/kotlin-lsp/issues/271)).
 
 #### Configuration
 
@@ -16,7 +20,7 @@ settings in `settings.json`:
 ```json
 {
   "lsp": {
-    "kotlin-language-server": {
+    "kotlin-dev-lsp": {
       "settings": {
         "compiler": {
           "jvm": {
@@ -29,14 +33,19 @@ settings in `settings.json`:
 }
 ```
 
-The full list of workspace configuration options can be found
-[here](https://github.com/fwcd/kotlin-language-server/blob/main/server/src/main/kotlin/org/javacs/kt/Configuration.kt).
+#### Manual Installation
 
-## Requirements
+Kotlin LSP will be downloaded and updated automatically. To use a manually installed version, set the path to the `intellij-server` executable in the release assets:
 
-- JDK 11+ (JDK 17 or 21 recommended)
-- Gradle or Maven project (optional, but recommended for dependency resolution)
-
-## Notes
-
-This extension was updated to use the community `fwcd/kotlin-language-server` because the JetBrains Kotlin LSP has issues with expiring builds that break functionality. The fwcd server is more reliable and doesn't require JDK 25 or expire after 30 days.
+```json
+{
+  "lsp": {
+    "kotlin-dev-lsp": {
+      "binary": {
+        "path": "path/to/bin/intellij-server",
+        "arguments": [ "--stdio" ]
+      }
+    }
+  }
+}
+```

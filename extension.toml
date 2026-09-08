@@ -6,8 +6,8 @@ authors = ["evrsen", "cholwell", "illyrius666"]
 description = "Kotlin language support."
 repository = "https://github.com/XodiumSoftware/zed-kotlin-ext"
 
-[language_servers.kotlin-language-server]
-name = "Kotlin Language Server"
+[language_servers.kotlin-dev-lsp]
+name = "Kotlin LSP"
 language = "Kotlin"
 
 [grammars.kotlin]
