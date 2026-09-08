@@ -62,7 +62,7 @@ Configuration and manual-installation options are documented in the [Guide](GUID
 
 ## License
 
-zed-kotlin-ext as a whole is distributed under [AGPL-3.0][license_url].
+zed-kotlin-ext as a whole is distributed under [GPL-3.0][license_url].
 Portions derived from the upstream [zed-extensions/kotlin](https://github.com/zed-extensions/kotlin)
 repository remain under the [MIT License](LICENSE).
 

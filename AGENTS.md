@@ -6,7 +6,7 @@
 - **Type:** Zed editor extension — compiled to wasm32-wasip2, plus a native companion binary
 - **Language:** Rust (edition 2024)
 - **Build Tool:** Cargo
-- **Upstream:** Forked from [zed-extensions/kotlin](https://github.com/zed-extensions/kotlin) (MIT — attribution kept in `LICENSE`; this fork's contributions are AGPL-3.0, see `LICENSE.md`)
+- **Upstream:** Forked from [zed-extensions/kotlin](https://github.com/zed-extensions/kotlin) (MIT — attribution kept in `LICENSE`; this fork's contributions are GPL-3.0, see `LICENSE.md`)
 
 ## APIs & Tools
 
@@ -63,7 +63,7 @@ zed-kotlin-ext/
 - **Line endings/formatting** — run `cargo fmt` before committing; `.editorconfig` enforces LF.
 - **Paths over configuration** — the only user-facing settings are `lsp.kotlin-dev-lsp.settings` (forwarded to the server under the `kotlin` key, minus `proxy_path`) and `binary.path`/`proxy_path` overrides.
 - **Proxy isolation** — `proxy/` must stay its own `[workspace]` so it never links into the wasm build; it must build on Windows, macOS, and Linux (all code gates via `#[cfg]`).
-- **License hygiene** — upstream-derived code keeps MIT attribution (`LICENSE`); this fork's files are AGPL-3.0 (`LICENSE.md`).
+- **License hygiene** — upstream-derived code keeps MIT attribution (`LICENSE`); this fork's files are GPL-3.0 (`LICENSE.md`).
 
 ## Versioning & Releases
 
