@@ -7,7 +7,7 @@ use std::fs;
 
 use zed_extension_api::{self as zed, Result, make_file_executable};
 
-use crate::util;
+use crate::utils;
 
 /// Manages the Kotlin LSP installation.
 pub struct KotlinLSP {
@@ -149,7 +149,7 @@ fn download_from_teamcity(version: String) -> Result<String> {
             ));
         }
         make_file_executable(&binary_path)?;
-        util::remove_outdated_versions(KotlinLSP::LANGUAGE_SERVER_ID, &extension_dir)?;
+        utils::remove_outdated_versions(KotlinLSP::LANGUAGE_SERVER_ID, &extension_dir)?;
     }
 
     Ok(binary_path)
