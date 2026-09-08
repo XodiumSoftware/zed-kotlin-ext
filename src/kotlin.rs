@@ -1,17 +1,19 @@
 use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
 
-mod kotlin_lsp;
+mod kotlin_language_server;
 mod util;
 
-use kotlin_lsp::KotlinLSP;
+use kotlin_language_server::KotlinLanguageServer;
 
 struct KotlinExtension {
-    kotlin_lsp: Option<KotlinLSP>,
+    kotlin_language_server: Option<KotlinLanguageServer>,
 }
 
 impl zed::Extension for KotlinExtension {
     fn new() -> Self {
-        Self { kotlin_lsp: None }
+        Self {
+            kotlin_language_server: None,
+        }
     }
 
     fn language_server_command(
@@ -20,12 +22,16 @@ impl zed::Extension for KotlinExtension {
         _: &zed::Worktree,
     ) -> zed::Result<zed::Command> {
         match language_server_id.as_ref() {
-            KotlinLSP::LANGUAGE_SERVER_ID => {
-                let kotlin_lsp = self.kotlin_lsp.get_or_insert_with(KotlinLSP::new);
-                let binary_path = kotlin_lsp.language_server_binary_path(language_server_id)?;
+            KotlinLanguageServer::LANGUAGE_SERVER_ID => {
+                let kotlin_language_server = self
+                    .kotlin_language_server
+                    .get_or_insert_with(KotlinLanguageServer::new);
+
+                let binary_path =
+                    kotlin_language_server.language_server_binary_path(language_server_id)?;
                 Ok(zed::Command {
                     command: binary_path,
-                    args: vec!["--stdio".to_string()],
+                    args: vec![],
                     env: Default::default(),
                 })
             }
