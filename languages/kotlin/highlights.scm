@@ -221,7 +221,19 @@
 
 "fun" @keyword.function
 
-(jump_expression) @keyword.return
+[
+  "return"
+  "return@"
+] @keyword.return
+
+"throw" @keyword.exception
+
+[
+  "break"
+  "break@"
+  "continue"
+  "continue@"
+] @keyword.repeat
 
 (annotation
   "@" @attribute
