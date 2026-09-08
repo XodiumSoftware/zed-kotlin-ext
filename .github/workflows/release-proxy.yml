@@ -2,11 +2,18 @@ name: Release Proxy Binary
 
 # Builds the kotlin-lsp-proxy native binary for every supported platform and
 # attaches the archives to the GitHub release, where the extension downloads
-# them from at runtime.
+# them from at runtime. Each matrix leg attaches its own asset directly, so
+# the run finishes when the slowest leg does.
+#
+# On every push to main the version in extension.toml is checked: if its tag
+# (v<version>) does not exist yet, the tag and a GitHub Release are created at
+# that commit and the binaries are attached. Cutting a release is therefore
+# just bumping extension.toml. Manual runs only build, validating the matrix
+# without publishing anything.
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main]
   workflow_dispatch: {}
 
 permissions:
@@ -16,79 +23,117 @@ defaults:
   run:
     shell: bash -euxo pipefail {0}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  release:
+    name: Tag & Create Release
+    if: github.repository_owner == 'XodiumSoftware'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      released: ${{ steps.tag.outputs.released }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve version tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(grep -m1 '^version = ' extension.toml | cut -d'"' -f2)
+          tag="v${version}"
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+
+          if gh api "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists; nothing to release."
+            echo "released=false" >> $GITHUB_OUTPUT
+          else
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+              --method POST \
+              --field "ref=refs/tags/$tag" \
+              --field "sha=$GITHUB_SHA"
+            echo "released=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release
+        if: steps.tag.outputs.released == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Kotlin DEV ${{ steps.tag.outputs.tag }}
+          generate_release_notes: true
+
   build:
     name: Build ${{ matrix.asset_name }}
-    if: github.repository_owner == 'XodiumSoftware'
+    needs: release
+    if: >-
+      github.repository_owner == 'XodiumSoftware' &&
+      (needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: true
+      # Host-native builds only: each runner builds its own target, so no
+      # cross-compile toolchain setup is needed.
       matrix:
         include:
-          - target: aarch64-apple-darwin
-            runner: macos-15
+          - runner: macos-15
             asset_name: kotlin-lsp-proxy-darwin-aarch64.tar.gz
-          - target: x86_64-apple-darwin
-            runner: macos-15-intel
+          - runner: macos-15-intel
             asset_name: kotlin-lsp-proxy-darwin-x86_64.tar.gz
-          - target: x86_64-unknown-linux-gnu
-            runner: ubuntu-22.04
+          - runner: ubuntu-22.04
             asset_name: kotlin-lsp-proxy-linux-x86_64.tar.gz
-          - target: aarch64-unknown-linux-gnu
-            runner: ubuntu-22.04-arm
+          - runner: ubuntu-22.04-arm
             asset_name: kotlin-lsp-proxy-linux-aarch64.tar.gz
-          - target: x86_64-pc-windows-msvc
-            runner: windows-latest
+          - runner: windows-latest
             asset_name: kotlin-lsp-proxy-windows-x86_64.zip
-          - target: aarch64-pc-windows-msvc
-            runner: windows-11-arm
+          - runner: windows-11-arm
             asset_name: kotlin-lsp-proxy-windows-aarch64.zip
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
         with:
-          targets: ${{ matrix.target }}
+          workspaces: proxy
+          key: ${{ matrix.asset_name }}
 
+      # Runner images ship a recent stable Rust (host target preinstalled).
       - name: Build proxy binary
         working-directory: proxy
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --locked
 
       - name: Package binary (Unix)
         if: runner.os != 'Windows'
         run: |
           tar -czf ${{ matrix.asset_name }} \
-            -C proxy/target/${{ matrix.target }}/release \
+            -C proxy/target/release \
             kotlin-lsp-proxy
 
       - name: Package binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path proxy/target/${{ matrix.target }}/release/kotlin-lsp-proxy.exe -DestinationPath ${{ matrix.asset_name }}
+          Compress-Archive -Path proxy/target/release/kotlin-lsp-proxy.exe -DestinationPath ${{ matrix.asset_name }}
 
-      - name: Upload artifact
+      - name: Attach to release
+        if: needs.release.outputs.released == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          files: ${{ matrix.asset_name }}
+
+      # Validation runs (tag exists / manual dispatch): keep binaries
+      # inspectable without touching the release.
+      - name: Upload artifact (validation runs)
+        if: needs.release.outputs.released != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.asset_name }}
           path: ${{ matrix.asset_name }}
-          retention-days: 1
-
-  release:
-    name: Attach to Release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*
+          retention-days: 7
