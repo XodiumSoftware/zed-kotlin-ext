@@ -1,7 +1,19 @@
+//! Internal helpers shared across the extension.
+
 use std::fs;
 
 use zed_extension_api::Result;
 
+/// Removes previously downloaded language server versions from the working
+/// directory.
+///
+/// Deletes every entry whose file name starts with `language_server_id`,
+/// except `version_dir`, which is the version currently in use.
+///
+/// # Errors
+///
+/// Returns an error if the working directory cannot be read. Individual
+/// directories that fail to delete are skipped silently.
 pub(super) fn remove_outdated_versions(
     language_server_id: &'static str,
     version_dir: &str,

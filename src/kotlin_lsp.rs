@@ -1,22 +1,41 @@
+//! Management of the Kotlin language server binary.
+//!
+//! Handles downloading, caching, and locating the JetBrains Kotlin LSP
+//! distribution for the current platform.
+
 use std::fs;
 
 use zed_extension_api::{self as zed, make_file_executable, Result};
 
 use crate::util;
 
+/// Manages the Kotlin LSP installation.
 pub struct KotlinLSP {
+    /// Path to a previously resolved server binary, if any.
     cached_binary_path: Option<String>,
 }
 
 impl KotlinLSP {
+    /// The language server ID, as registered in `extension.toml`.
     pub const LANGUAGE_SERVER_ID: &'static str = "kotlin-dev-lsp";
 
+    /// Creates a new manager with no cached binary path.
     pub fn new() -> Self {
         KotlinLSP {
             cached_binary_path: None,
         }
     }
 
+    /// Returns the path to the language server binary, downloading and
+    /// extracting the server archive first if needed.
+    ///
+    /// The resolved path is cached for the lifetime of this manager, so later
+    /// calls return immediately.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the server archive cannot be downloaded or
+    /// extracted, or the platform is unsupported.
     pub fn language_server_binary_path(
         &mut self,
         language_server_id: &zed::LanguageServerId,
@@ -43,14 +62,24 @@ impl KotlinLSP {
     }
 }
 
-/// Return URL to the kotlin-lsp package on TeamCity servers
+/// Returns the Kotlin LSP build version to download.
+// JetBrains' RELEASES.md is stale (still points to expired 262.x builds).
+// Hardcode the latest known working build until they update it.
+// See: https://github.com/Kotlin/kotlin-lsp/issues/271
 fn get_version() -> Result<String> {
-    // JetBrains' RELEASES.md is stale (still points to expired 262.x builds).
-    // Hardcode the latest known working build until they update it.
-    // See: https://github.com/Kotlin/kotlin-lsp/issues/271
     Ok("263.4421.0".to_string())
 }
 
+/// Downloads the server archive for the given `version` from JetBrains and
+/// returns the path to the server binary.
+///
+/// If the version's directory already exists, the download is skipped.
+/// After a successful download, older versions are removed from the working
+/// directory.
+///
+/// # Errors
+///
+/// Returns an error on 32-bit x86 platforms or if the download fails.
 fn download_from_teamcity(version: String) -> Result<String> {
     let (os, arch) = zed_extension_api::current_platform();
 
