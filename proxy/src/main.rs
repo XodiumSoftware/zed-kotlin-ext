@@ -85,14 +85,12 @@ fn main() {
             match reader.read_message() {
                 Ok(Some(raw)) => {
                     // Only requests carry an `id`; skip parsing high-volume notifications.
-                    if raw_has_id(&raw) {
-                        if let Some(msg) = parse_lsp_content(&raw) {
-                            if is_location_request(&msg) {
-                                if let Some(id) = msg.get("id").cloned() {
-                                    tracked_in.lock().unwrap().insert(id);
-                                }
-                            }
-                        }
+                    if raw_has_id(&raw)
+                        && let Some(msg) = parse_lsp_content(&raw)
+                        && is_location_request(&msg)
+                        && let Some(id) = msg.get("id").cloned()
+                    {
+                        tracked_in.lock().unwrap().insert(id);
                     }
                     let mut w = stdin_writer.lock().unwrap();
                     if w.write_all(&raw).is_err() || w.flush().is_err() {

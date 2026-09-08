@@ -15,7 +15,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 use serde_json::Value;
@@ -40,11 +40,11 @@ pub fn rewrite_archive_locations(msg: &mut Value) -> bool {
     for loc in results {
         for key in ["uri", "targetUri"] {
             let current = loc.get(key).and_then(|v| v.as_str()).map(str::to_owned);
-            if let Some(uri) = current {
-                if let Some(new_uri) = resolve_archive_uri(&uri) {
-                    loc[key] = Value::String(new_uri);
-                    rewritten = true;
-                }
+            if let Some(uri) = current
+                && let Some(new_uri) = resolve_archive_uri(&uri)
+            {
+                loc[key] = Value::String(new_uri);
+                rewritten = true;
             }
         }
     }
@@ -56,7 +56,7 @@ pub fn rewrite_archive_locations(msg: &mut Value) -> bool {
 /// extraction fails (caller then leaves the original URI untouched).
 pub fn resolve_archive_uri(uri: &str) -> Option<String> {
     let (archive_uri, inner) = split_archive_uri(uri)?;
-    let archive_path = uri_to_path(&archive_uri);
+    let archive_path = uri_to_path(archive_uri);
     let inner = percent_decode(inner.trim_start_matches('/'));
 
     let file_name = inner.rsplit('/').next().unwrap_or("Unknown");
@@ -110,10 +110,10 @@ fn uri_to_path(archive_uri: &str) -> String {
     // On Windows a URI path is `/C:/…`; drop the leading slash.
     #[cfg(windows)]
     {
-        return decoded
+        decoded
             .strip_prefix('/')
             .map(str::to_owned)
-            .unwrap_or(decoded);
+            .unwrap_or(decoded)
     }
     #[cfg(not(windows))]
     {
@@ -130,7 +130,7 @@ fn read_zip_entry(archive: &str, inner: &str) -> Option<Vec<u8>> {
     Some(buf)
 }
 
-fn path_to_file_uri(path: &PathBuf) -> String {
+fn path_to_file_uri(path: &Path) -> String {
     let s = path.to_string_lossy().replace('\\', "/");
     if s.starts_with('/') {
         format!("file://{s}")
@@ -145,12 +145,13 @@ fn percent_decode(s: &str) -> String {
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let (Some(hi), Some(lo)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
-                out.push(hi << 4 | lo);
-                i += 3;
-                continue;
-            }
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let (Some(hi), Some(lo)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2]))
+        {
+            out.push(hi << 4 | lo);
+            i += 3;
+            continue;
         }
         out.push(bytes[i]);
         i += 1;
