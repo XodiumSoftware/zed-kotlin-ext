@@ -1,10 +1,9 @@
-use zed::serde_json;
-use zed::LanguageServerId;
-use zed_extension_api::{self as zed, settings::LspSettings, Result};
+use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
 
-mod language_servers;
+mod kotlin_lsp;
+mod util;
 
-use language_servers::KotlinLSP;
+use kotlin_lsp::KotlinLSP;
 
 struct KotlinExtension {
     kotlin_lsp: Option<KotlinLSP>,
@@ -40,13 +39,13 @@ impl zed::Extension for KotlinExtension {
         &mut self,
         language_server_id: &LanguageServerId,
         worktree: &zed_extension_api::Worktree,
-    ) -> Result<Option<serde_json::Value>> {
+    ) -> Result<Option<zed::serde_json::Value>> {
         let settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)
             .ok()
             .and_then(|lsp_settings| lsp_settings.settings.clone())
             .unwrap_or_default();
 
-        Ok(Some(serde_json::json!({
+        Ok(Some(zed::serde_json::json!({
             "kotlin": settings
         })))
     }
