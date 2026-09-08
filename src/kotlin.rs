@@ -5,12 +5,12 @@
 //! servers on first use and cached for subsequent sessions. Workspace
 //! configuration is forwarded from Zed's `lsp.kotlin-dev-lsp` settings.
 
-use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
+use zed_extension_api::{self as zed, LanguageServerId, Result, settings::LspSettings};
 
-mod kotlin_lsp;
+mod lsp;
 mod util;
 
-use kotlin_lsp::KotlinLSP;
+use lsp::KotlinLSP;
 
 /// The Kotlin extension registered with Zed.
 struct KotlinExtension {
@@ -65,7 +65,7 @@ impl zed::Extension for KotlinExtension {
     ) -> Result<Option<zed::serde_json::Value>> {
         let settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)
             .ok()
-            .and_then(|lsp_settings| lsp_settings.settings.clone())
+            .and_then(|lsp_settings| lsp_settings.settings)
             .unwrap_or_default();
 
         Ok(Some(zed::serde_json::json!({

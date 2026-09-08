@@ -1,6 +1,16 @@
-# zed-kotlin
+# zed-kotlin-ext
 
-Kotlin language support for [Zed](https://github.com/zed-industries/zed).
+Kotlin language support for [Zed](https://github.com/zed-industries/zed), published as the **Kotlin DEV** extension.
+
+## Features
+
+- **Language server** — powered by JetBrains' official [Kotlin LSP](https://github.com/Kotlin/kotlin-lsp): completion, diagnostics, quick fixes, hover, rename, formatting, semantic highlighting, call hierarchy, and folding. The server binary is downloaded automatically on first use and cached per version.
+- **Syntax highlighting** — tree-sitter based, with KDoc (`/** */`) highlighted distinctly from ordinary comments.
+- **Outline** — classes, objects, companion objects, type aliases, enum entries, functions, and properties in the outline panel and breadcrumbs.
+- **Run & test from the gutter** — runnable buttons on `fun main()` and on test functions/classes annotated with `@Test`, `@ParameterizedTest`, or `@RepeatedTest`, including tests in `@Nested` inner classes:
+  - Gradle projects run `./gradlew test --tests ...` / `./gradlew run`, automatically targeting `:module:test` in multi-module builds
+  - Maven projects run `mvn test -Dtest=...` (or `./mvnw` when present)
+- **Text objects (Vim mode)** — `if`/`af` for functions (including lambdas and constructors), `ic`/`ac` for classes, and comment objects, powered by tree-sitter queries.
 
 ## Language Server
 

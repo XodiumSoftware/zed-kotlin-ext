@@ -5,7 +5,7 @@
 
 use std::fs;
 
-use zed_extension_api::{self as zed, make_file_executable, Result};
+use zed_extension_api::{self as zed, Result, make_file_executable};
 
 use crate::util;
 
@@ -73,13 +73,15 @@ fn get_version() -> Result<String> {
 /// Downloads the server archive for the given `version` from JetBrains and
 /// returns the path to the server binary.
 ///
-/// If the version's directory already exists, the download is skipped.
-/// After a successful download, older versions are removed from the working
-/// directory.
+/// If a complete installation (directory *and* server binary) already exists,
+/// the download is skipped. A leftover directory without the binary is treated
+/// as a failed install and removed before downloading again. After a
+/// successful download, older versions are removed from the working directory.
 ///
 /// # Errors
 ///
-/// Returns an error on 32-bit x86 platforms or if the download fails.
+/// Returns an error on 32-bit x86 platforms, if the download fails, or if the
+/// extracted archive does not contain the expected server binary.
 fn download_from_teamcity(version: String) -> Result<String> {
     let (os, arch) = zed_extension_api::current_platform();
 
@@ -94,7 +96,7 @@ fn download_from_teamcity(version: String) -> Result<String> {
         zed::Architecture::X8664 => "",
         zed::Architecture::Aarch64 => "-aarch64",
         _ => {
-            return Err("Platform X86 is not supported by the Kotlin language server.".to_string())
+            return Err("Platform X86 is not supported by the Kotlin language server.".to_string());
         }
     };
 
@@ -127,7 +129,12 @@ fn download_from_teamcity(version: String) -> Result<String> {
         }
     );
 
-    if !fs::metadata(&extension_dir).is_ok_and(|metadata| metadata.is_dir()) {
+    if !fs::metadata(&binary_path).is_ok_and(|metadata| metadata.is_file()) {
+        if fs::metadata(&extension_dir).is_ok_and(|metadata| metadata.is_dir()) {
+            fs::remove_dir_all(&extension_dir)
+                .map_err(|e| format!("failed to remove incomplete {extension_dir}: {e}"))?;
+        }
+
         let downloaded_file_type = match os {
             // We don't ask questions as to why `sit` == `zip`. Let JetBrains keep their secrets there
             zed::Os::Windows | zed::Os::Mac => zed_extension_api::DownloadedFileType::Zip,
@@ -135,6 +142,12 @@ fn download_from_teamcity(version: String) -> Result<String> {
         };
 
         zed::download_file(&url, &extension_dir, downloaded_file_type)?;
+
+        if !fs::metadata(&binary_path).is_ok_and(|metadata| metadata.is_file()) {
+            return Err(format!(
+                "Kotlin language server binary not found at {binary_path} after downloading {asset_name}; the archive layout may have changed"
+            ));
+        }
         make_file_executable(&binary_path)?;
         util::remove_outdated_versions(KotlinLSP::LANGUAGE_SERVER_ID, &extension_dir)?;
     }
