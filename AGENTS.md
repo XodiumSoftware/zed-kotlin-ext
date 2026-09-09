@@ -48,7 +48,8 @@ zed-kotlin-ext/
 │   └── src/
 │       ├── main.rs             # stdio proxy: spawns LSP, forwards traffic, intercepts definition-family responses
 │       ├── sidecar.rs          # HTTP sidecar (127.0.0.1): lets the wasm ext issue LSP requests (injects $proxy-N ids);
-│       │                       # port file at <cwd>/proxy/<hex($KOTLIN_LSP_WORKTREE_ROOT)>; used for start_debug_server
+│       │                       # writes its port to the abs path in $KOTLIN_LSP_PORT_FILE (proxy cwd is the worktree!);
+│       │                       # used for start_debug_server
 │       ├── lsp.rs              # LSP framing (Content-Length + JSON body)
 │       ├── log.rs              # window/logMessage logging to Zed's server logs panel
 │       ├── resolve.rs          # archive URI split/extract/rewrite (+ unit tests)

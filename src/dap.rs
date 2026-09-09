@@ -6,11 +6,13 @@
 //! a fresh debug adapter session; Zed then speaks DAP to that port directly.
 //!
 //! A wasm extension cannot issue LSP requests itself, so this module goes
-//! through the proxy's HTTP sidecar (`proxy/src/sidecar.rs`): it binds
-//! 127.0.0.1:<ephemeral>, publishes its port to `proxy/<hex(worktree)>` inside
-//! the extension work directory, and accepts POST `{"method", "params"}` bodies
-//! answering with `{"result"|"error": ...}`. This is the same mechanism the
-//! Zed Java extension uses for jdt.ls (`vscode.java.startDebugSession`).
+//! through the proxy's HTTP sidecar (`proxy/src/sidecar.rs`): the extension
+//! tells the proxy, via `KOTLIN_LSP_PORT_FILE`, the absolute path of the port
+//! file to publish (`<extension workdir>/proxy/<hex(worktree)>`); the sidecar
+//! binds 127.0.0.1:<ephemeral>, writes its port there, and accepts POST
+//! `{"method", "params"}` bodies answering with `{"result"|"error": ...}`. This
+//! is the same mechanism the Zed Java extension uses for jdt.ls
+//! (`vscode.java.startDebugSession`).
 //!
 //! Verified against kotlin-lsp 263.4421.0 (see `.spike/` probes):
 //! - attach: `{ "request": "attach", "hostName", "port" }` — breakpoints hit,
@@ -21,7 +23,6 @@
 //!   starting the debug server itself does not require it.
 
 use std::fs;
-use std::path::Path;
 
 use zed::http_client::{HttpMethod, HttpRequest, fetch};
 use zed::serde_json::{self, Value, json};
@@ -31,9 +32,11 @@ use zed_extension_api as zed;
 /// `[debug_adapters]` (and used as `"adapter"` value in `debug.json`).
 pub const DEBUG_ADAPTER_NAME: &str = "Kotlin";
 
-/// Env var read by the native proxy (`proxy/src/sidecar.rs`); keys the
-/// sidecar port file per worktree.
-pub const WORKTREE_ENV_VAR: &str = "KOTLIN_LSP_WORKTREE_ROOT";
+/// Env var the extension sets when spawning the proxy: the absolute path of
+/// the port file the proxy's sidecar must write to. The proxy's cwd is the
+/// worktree root while ours is the extension work directory, so the absolute
+/// path is computed here and handed over verbatim (see `port_file_path`).
+pub const PORT_FILE_ENV: &str = "KOTLIN_LSP_PORT_FILE";
 
 /// The LSP command that starts kotlin-lsp's embedded DAP server. Takes no
 /// arguments and returns the listening TCP port (a bare integer).
@@ -95,23 +98,33 @@ pub fn start_debug_server(worktree_root: &str) -> Result<u16, String> {
         })
 }
 
-/// Reads the sidecar's port file. The proxy writes it relative to the
-/// extension's work directory (which is our cwd) as `proxy/<hex(worktree)>`.
+/// Absolute path of the sidecar port file for `worktree_root`:
+/// `<extension workdir>/proxy/<hex(worktree)>`. Shared between the spawn site
+/// (passes it to the proxy via [`PORT_FILE_ENV`]) and `read_sidecar_port`.
+pub fn port_file_path(worktree_root: &str) -> Result<String, String> {
+    let dir = std::env::current_dir()
+        .map_err(|err| format!("failed to resolve extension work directory: {err}"))?;
+    Ok(dir
+        .join("proxy")
+        .join(hex_encode(worktree_root))
+        .to_string_lossy()
+        .into_owned())
+}
+
+/// Reads the sidecar's port file (same absolute path the proxy was told to
+/// write to at language-server spawn time).
 fn read_sidecar_port(worktree_root: &str) -> Result<u16, String> {
-    let path = Path::new("proxy").join(hex_encode(worktree_root));
+    let path = port_file_path(worktree_root)?;
     let content = fs::read_to_string(&path).map_err(|_| {
         format!(
-            "kotlin-lsp sidecar not found at {} — debugging requires the kotlin-lsp-proxy \
-             (it is missing or was overridden via proxy_path)",
-            path.display()
+            "kotlin-lsp sidecar not found at {path} — debugging requires the kotlin-lsp-proxy \
+             (it is missing or was overridden via proxy_path)"
         )
     })?;
-    content.trim().parse::<u16>().map_err(|err| {
-        format!(
-            "kotlin-lsp sidecar port file at {} is corrupted: {err}",
-            path.display()
-        )
-    })
+    content
+        .trim()
+        .parse::<u16>()
+        .map_err(|err| format!("kotlin-lsp sidecar port file at {path} is corrupted: {err}"))
 }
 
 /// Lowercase hex encoding of `s`'s UTF-8 bytes; must match the proxy's

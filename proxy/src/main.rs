@@ -15,7 +15,9 @@
 //!
 //! Usage: `kotlin-lsp-proxy <kotlin-lsp-binary> [args...]`
 //!
-//! Environment: `KOTLIN_LSP_WORKTREE_ROOT` — worktree path, keys the sidecar port file.
+//! Environment: `KOTLIN_LSP_PORT_FILE` — absolute path where the sidecar writes
+//! its listening port (the extension computes it; our cwd is the worktree root,
+//! not the extension work directory, so we must not resolve relative paths).
 
 #[macro_use]
 mod log;

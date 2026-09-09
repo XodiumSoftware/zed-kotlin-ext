@@ -16,6 +16,10 @@
 //! Zed), and returns its `result`/`error` as the HTTP response body — the exact
 //! shape the `zed-extensions/java` wasm side already parses.
 //!
+//! The port is published to the exact absolute path the extension hands us via
+//! the `KOTLIN_LSP_PORT_FILE` env var (the proxy's cwd is the *worktree*, so it
+//! must not do relative path math itself).
+//!
 //! The sidecar degrades gracefully: if the port cannot be bound or the
 //! worktree is unknown, the proxy simply runs without it (debugging unavailable,
 //! everything else unaffected).
@@ -45,10 +49,11 @@ const SIDECAR_TIMEOUT: Duration = Duration::from_secs(90);
 /// string id can never collide with client traffic on the same connection.
 const ID_PREFIX: &str = "$proxy-";
 
-/// Env var carrying the worktree root path, set by the extension. Keys the port
-/// file so several windows (each with their own proxy+LSP) don't clobber each
-/// other's file.
-const WORKTREE_ENV: &str = "KOTLIN_LSP_WORKTREE_ROOT";
+/// Env var the extension sets to the absolute path of the port file it will
+/// read back (`<extension workdir>/proxy/<hex(worktree)>`). The proxy must NOT
+/// resolve this itself: its cwd is the *worktree root*, not the extension work
+/// directory — relative resolution would write the file into the wrong place.
+const PORT_FILE_ENV: &str = "KOTLIN_LSP_PORT_FILE";
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -68,10 +73,10 @@ fn run(child_stdin: Arc<Mutex<ChildStdin>>, pending: PendingSidecar) {
     };
     let port = listener.local_addr().map(|a| a.port()).unwrap_or(0);
 
-    match env::var(WORKTREE_ENV) {
-        Ok(worktree) => write_port_file(&worktree, port),
-        Err(_) => crate::log::warn(&format!(
-            "LSP sidecar: {WORKTREE_ENV} not set; skipping port file (debugging needs the latest proxy+extension pair)"
+    match env::var(PORT_FILE_ENV) {
+        Ok(path) if !path.is_empty() => write_port_file(PathBuf::from(path).as_path(), port),
+        _ => crate::log::warn(&format!(
+            "LSP sidecar: {PORT_FILE_ENV} not set; skipping port file (debugging needs the latest proxy+extension pair)"
         )),
     }
     crate::log::info(&format!("LSP sidecar listening on 127.0.0.1:{port}"));
@@ -84,10 +89,10 @@ fn run(child_stdin: Arc<Mutex<ChildStdin>>, pending: PendingSidecar) {
     }
 }
 
-/// Writes the listening port to `<cwd>/proxy/<hex(worktree)>`, digits only, no
-/// trailing newline (parsed with a plain `.parse::<u16>()` on the wasm side).
-fn write_port_file(worktree: &str, port: u16) {
-    let path = port_file_path(worktree);
+/// Writes the listening port (digits only, no trailing newline — parsed with a
+/// plain `.parse::<u16>()` on the wasm side) to the absolute path given in
+/// `KOTLIN_LSP_PORT_FILE`, creating the parent dir.
+fn write_port_file(path: &std::path::Path, port: u16) {
     if let Some(parent) = path.parent()
         && let Err(err) = fs::create_dir_all(parent)
     {
@@ -97,7 +102,7 @@ fn write_port_file(worktree: &str, port: u16) {
         ));
         return;
     }
-    if let Err(err) = fs::write(&path, port.to_string()) {
+    if let Err(err) = fs::write(path, port.to_string()) {
         crate::log::warn(&format!(
             "LSP sidecar: failed to write port file {}: {err}",
             path.display()
@@ -108,13 +113,9 @@ fn write_port_file(worktree: &str, port: u16) {
 /// Removes this instance's port file on shutdown so stale ports can't mislead
 /// the extension after the proxy exits (e.g. on language-server restart).
 pub fn cleanup_port_file() {
-    if let Ok(worktree) = env::var(WORKTREE_ENV) {
-        let _ = fs::remove_file(port_file_path(&worktree));
+    if let Ok(path) = env::var(PORT_FILE_ENV) {
+        let _ = fs::remove_file(path);
     }
-}
-
-fn port_file_path(worktree: &str) -> PathBuf {
-    PathBuf::from("proxy").join(hex_encode(worktree))
 }
 
 /// If `msg` is the response to an injected sidecar request, routes it onto the
@@ -273,22 +274,10 @@ fn read_http_request(r: &mut impl Read) -> Option<(String, Vec<u8>)> {
     Some((request_line, body))
 }
 
-/// Plain lowercase hex encoding of `s`'s UTF-8 bytes; the wasm side re-implements
-/// this one-liner to locate the port file.
-fn hex_encode(s: &str) -> String {
-    s.bytes().map(|b| format!("{b:02x}")).collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
-
-    #[test]
-    fn hex_encodes_worktree_path() {
-        assert_eq!(hex_encode("C:/proj"), "433a2f70726f6a");
-        assert_eq!(hex_encode(""), "");
-    }
 
     #[test]
     fn parses_minimal_post() {

@@ -85,9 +85,16 @@ impl zed::Extension for KotlinExtension {
                         Ok(zed::Command {
                             command: proxy_path,
                             args: vec![absolute_binary_path, "--stdio".to_string()],
-                            // Keys the sidecar port file per worktree so the debug
-                            // adapter wiring (`dap.rs`) can find this instance.
-                            env: vec![(dap::WORKTREE_ENV_VAR.to_string(), worktree.root_path())],
+                            // Tells the proxy exactly where to publish its HTTP sidecar
+                            // port file for this worktree (debug adapter wiring, `dap.rs`).
+                            // The proxy's cwd is the worktree root — we must hand it the
+                            // absolute extension-workdir path, it cannot compute it.
+                            env: vec![(
+                                dap::PORT_FILE_ENV.to_string(),
+                                dap::port_file_path(&worktree.root_path()).map_err(|err| {
+                                    format!("failed to compute sidecar port file path: {err}")
+                                })?,
+                            )],
                         })
                     }
                     Err(err) => {
