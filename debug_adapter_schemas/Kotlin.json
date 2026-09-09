@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "Attach to a running JVM (JDWP)",
+      "description": "Attach to a JVM launched with JDWP agent (e.g. `./gradlew run --debug-jvm` or `-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005`).",
+      "properties": {
+        "request": {
+          "type": "string",
+          "enum": ["attach"],
+          "description": "The request type, always \"attach\"."
+        },
+        "hostName": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Host of the remote debuggee JVM."
+        },
+        "port": {
+          "type": "integer",
+          "description": "JDWP port of the debuggee JVM (5005 for `gradle run --debug-jvm`)."
+        },
+        "timeout": {
+          "type": "integer",
+          "default": 30000,
+          "description": "Timeout before reconnecting, in milliseconds."
+        }
+      },
+      "required": ["request", "port"]
+    },
+    {
+      "title": "Launch a Kotlin/JVM application",
+      "description": "Launch a JVM program under the debugger. A full classpath is required today; auto-resolution from the workspace is planned.",
+      "properties": {
+        "request": {
+          "type": "string",
+          "enum": ["launch"],
+          "description": "The request type, always \"launch\"."
+        },
+        "mainClass": {
+          "type": "string",
+          "description": "Fully qualified name of the class with the main entry point (file-level mains get a `Kt` suffix, e.g. `com.example.AppKt`)."
+        },
+        "classPaths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "JVM classpath entries (compiled classes dirs and dependency jars)."
+        },
+        "javaExec": {
+          "type": "string",
+          "description": "Path to the java executable. Defaults to the project's resolved JDK."
+        },
+        "args": {
+          "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Command line arguments passed to the program."
+        },
+        "vmArgs": {
+          "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }],
+          "description": "Extra JVM options (e.g. -Xmx2g, -Dname=value)."
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Extra environment variables for the program."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory of the program. Defaults to the project root."
+        }
+      },
+      "required": ["request", "mainClass", "classPaths"]
+    }
+  ]
+}

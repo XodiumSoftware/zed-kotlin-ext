@@ -10,6 +10,10 @@ repository = "https://github.com/XodiumSoftware/zed-kotlin-ext"
 name = "Kotlin LSP"
 language = "Kotlin"
 
+# Debug adapter backed by kotlin-lsp's embedded JetBrains debug server,
+# started per session via the proxy sidecar (`start_debug_server`).
+[debug_adapters.Kotlin]
+
 [grammars.kotlin]
 repository = "https://github.com/fwcd/tree-sitter-kotlin"
 commit = "1852ea17b7f60fb3f9d84e0b1555d56b46b39fb1"
