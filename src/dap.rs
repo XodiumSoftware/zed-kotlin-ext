@@ -31,6 +31,10 @@ use zed_extension_api as zed;
 /// `[debug_adapters]` (and used as `"adapter"` value in `debug.json`).
 pub const DEBUG_ADAPTER_NAME: &str = "Kotlin";
 
+/// Env var read by the native proxy (`proxy/src/sidecar.rs`); keys the
+/// sidecar port file per worktree.
+pub const WORKTREE_ENV_VAR: &str = "KOTLIN_LSP_WORKTREE_ROOT";
+
 /// The LSP command that starts kotlin-lsp's embedded DAP server. Takes no
 /// arguments and returns the listening TCP port (a bare integer).
 const START_DEBUG_SERVER_COMMAND: &str = "start_debug_server";

@@ -85,7 +85,9 @@ impl zed::Extension for KotlinExtension {
                         Ok(zed::Command {
                             command: proxy_path,
                             args: vec![absolute_binary_path, "--stdio".to_string()],
-                            env: Default::default(),
+                            // Keys the sidecar port file per worktree so the debug
+                            // adapter wiring (`dap.rs`) can find this instance.
+                            env: vec![(dap::WORKTREE_ENV_VAR.to_string(), worktree.root_path())],
                         })
                     }
                     Err(err) => {
