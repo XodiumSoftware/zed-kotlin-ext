@@ -30,7 +30,13 @@ use zed_extension_api as zed;
 
 /// The debug adapter name, as registered in `extension.toml` under
 /// `[debug_adapters]` (and used as `"adapter"` value in `debug.json`).
-pub const DEBUG_ADAPTER_NAME: &str = "Kotlin";
+///
+/// MUST equal the server-side adapter id (`JvmDebuggerAdapter`): Zed forwards
+/// the scenario's adapter name as the DAP `initialize` request's `adapterID`,
+/// and kotlin-lsp's `XDebuggerDapServer` rejects unknown adapter ids with
+/// "No debugger adapter found for given adapter id: …" (verified on build
+/// 263.4421.0 by extracting language-server.dap.jvm.jar).
+pub const DEBUG_ADAPTER_NAME: &str = "intellij_debugger";
 
 /// Env var the extension sets when spawning the proxy: the absolute path of
 /// the port file the proxy's sidecar must write to. The proxy's cwd is the

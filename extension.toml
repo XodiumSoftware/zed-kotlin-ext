@@ -12,7 +12,13 @@ language = "Kotlin"
 
 # Debug adapter backed by kotlin-lsp's embedded JetBrains debug server,
 # started per session via the proxy sidecar (`start_debug_server`).
-[debug_adapters.Kotlin]
+# The name MUST be "intellij_debugger": kotlin-lsp's DAP server rejects
+# `initialize` requests whose adapterID isn't a registered server-side
+# adapter id (XDebuggerDapServer.getAdapterById; the only id is
+# "intellij_debugger" -> JvmDebuggerAdapter, verified on 263.4421.0).
+# Zed forwards the scenario's adapter name as the DAP adapterID.
+[debug_adapters.intellij_debugger]
+schema_path = "debug_adapter_schemas/Kotlin.json"
 
 [grammars.kotlin]
 repository = "https://github.com/fwcd/tree-sitter-kotlin"
