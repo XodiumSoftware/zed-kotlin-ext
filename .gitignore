@@ -1,3 +1,5 @@
 target
 *.wasm
 grammars
+target-dev
+.spike
