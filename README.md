@@ -17,6 +17,7 @@
 
 [![Contributors][contributors_shield_url]][contributors_url]
 [![Issues][issues_shield_url]][issues_url]
+[![deps.rs][deps_rs_shield_url]][deps_rs_url]
 </div>
 
 ## Table of Contents
@@ -46,8 +47,8 @@ automatically on first use.
 - **Syntax highlighting** — tree-sitter based, with KDoc (`/** */`) highlighted distinctly from ordinary comments.
 - **Outline** — classes, objects, companion objects, type aliases, enum entries, functions, and properties in the outline panel and breadcrumbs.
 - **Run & test from the gutter** — runnable buttons on `fun main()` and on test functions/classes annotated with `@Test`, `@ParameterizedTest`, or `@RepeatedTest`, including tests in `@Nested` inner classes:
-  - Gradle projects run `./gradlew test --tests ...` / `./gradlew run`, automatically targeting `:module:test` in multi-module builds
-  - Maven projects run `mvn test -Dtest=...` (or `./mvnw` when present)
+    - Gradle projects run `./gradlew test --tests ...` / `./gradlew run`, automatically targeting `:module:test` in multi-module builds
+    - Maven projects run `mvn test -Dtest=...` (or `./mvnw` when present)
 - **Text objects (Vim mode)** — `if`/`af` for functions (including lambdas and constructors), `ic`/`ac` for classes, and comment objects, powered by tree-sitter queries.
 
 ## Language Server
@@ -78,21 +79,14 @@ repository remain under the [MIT License](LICENSE).
 <p align="right"><a href="#readme-top">▲</a></p>
 
 [built_with_shield_url]: https://skillicons.dev/icons?i=rust,kotlin,github,githubactions
-
 [built_with_url]: https://skillicons.dev
-
 [code_of_conduct_url]: https://github.com/XodiumSoftware/zed-kotlin-ext?tab=coc-ov-file
-
 [contributing_url]: https://github.com/XodiumSoftware/zed-kotlin-ext/blob/main/CONTRIBUTING.md
-
 [contributors_shield_url]: https://img.shields.io/github/contributors/XodiumSoftware/zed-kotlin-ext?style=for-the-badge&color=blue
-
 [contributors_url]: https://github.com/XodiumSoftware/zed-kotlin-ext/graphs/contributors
-
+[deps_rs_shield_url]: https://deps.rs/repo/github/XodiumSoftware/zed-kotlin-ext/status.svg?style=for-the-badge
+[deps_rs_url]: https://deps.rs/repo/github/XodiumSoftware/zed-kotlin-ext
 [issues_shield_url]: https://img.shields.io/github/issues/XodiumSoftware/zed-kotlin-ext?style=for-the-badge&color=yellow
-
 [issues_url]: https://github.com/XodiumSoftware/zed-kotlin-ext/issues
-
 [license_url]: https://github.com/XodiumSoftware/zed-kotlin-ext/blob/main/LICENSE.md
-
 [security_url]: https://github.com/XodiumSoftware/zed-kotlin-ext?tab=security-ov-file
