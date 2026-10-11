@@ -4,6 +4,41 @@ use std::fs;
 
 use zed_extension_api::Result;
 
+/// Downloads and extracts an archive to `version_dir` if `binary_path` is missing,
+/// then marks it executable and removes outdated versions.
+///
+/// If `binary_path` already exists, this is a no-op. Otherwise, `url` is
+/// downloaded (as `file_type`) into `version_dir`, `binary_path` is marked
+/// executable, and stale directories matching `install_prefix` are removed.
+///
+/// # Errors
+///
+/// Returns an error if the download fails, or if the binary still does not
+/// exist after extraction.
+pub(super) fn download_and_install(
+    url: &str,
+    version_dir: &str,
+    file_type: zed_extension_api::DownloadedFileType,
+    binary_path: &str,
+    install_prefix: &'static str,
+) -> Result<()> {
+    if fs::metadata(binary_path).is_ok_and(|m| m.is_file()) {
+        return Ok(());
+    }
+
+    zed_extension_api::download_file(url, version_dir, file_type)?;
+    zed_extension_api::make_file_executable(binary_path)?;
+    remove_outdated_versions(install_prefix, version_dir)?;
+
+    if !fs::metadata(binary_path).is_ok_and(|m| m.is_file()) {
+        return Err(format!(
+            "Binary not found at {binary_path} after downloading"
+        ));
+    }
+
+    Ok(())
+}
+
 /// Removes previously downloaded language server versions from the working
 /// directory.
 ///

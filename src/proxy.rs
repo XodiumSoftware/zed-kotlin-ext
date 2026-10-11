@@ -6,9 +6,7 @@
 //! downloaded from this repository's GitHub Releases on first use and cached
 //! afterwards; a user-configured path can bypass the download entirely.
 
-use std::fs;
-
-use zed_extension_api::{self as zed, Result, Worktree, make_file_executable, serde_json::Value};
+use zed_extension_api::{self as zed, Result, Worktree, serde_json::Value};
 
 use crate::utils;
 
@@ -84,28 +82,29 @@ impl Proxy {
         let version_dir = format!("{INSTALL_PREFIX}-{}", release.version);
         let binary_path = format!("{version_dir}/{}", proxy_exec());
 
-        if !fs::metadata(&binary_path).is_ok_and(|m| m.is_file()) {
-            let asset = release
-                .assets
-                .iter()
-                .find(|a| a.name == asset_name)
-                .ok_or_else(|| {
-                    format!(
-                        "No kotlin-lsp-proxy asset matching {asset_name:?} in release {}",
-                        release.version
-                    )
-                })?;
+        let asset = release
+            .assets
+            .iter()
+            .find(|a| a.name == asset_name)
+            .ok_or_else(|| {
+                format!(
+                    "No kotlin-lsp-proxy asset matching {asset_name:?} in release {}",
+                    release.version
+                )
+            })?;
 
-            zed::set_language_server_installation_status(
-                language_server_id,
-                &zed::LanguageServerInstallationStatus::Downloading,
-            );
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &zed::LanguageServerInstallationStatus::Downloading,
+        );
 
-            zed::download_file(&asset.download_url, &version_dir, file_type)
-                .map_err(|err| format!("Failed to download kotlin-lsp-proxy: {err}"))?;
-            make_file_executable(&binary_path)?;
-            utils::remove_outdated_versions(INSTALL_PREFIX, &version_dir)?;
-        }
+        utils::download_and_install(
+            &asset.download_url,
+            &version_dir,
+            file_type,
+            &binary_path,
+            INSTALL_PREFIX,
+        )?;
 
         self.cached_binary_path = Some(binary_path.clone());
         Ok(binary_path)

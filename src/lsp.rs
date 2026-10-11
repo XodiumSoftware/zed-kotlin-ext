@@ -5,9 +5,7 @@
 
 use std::fs;
 
-use zed_extension_api::{
-    self as zed, GithubReleaseOptions, Result, latest_github_release, make_file_executable,
-};
+use zed_extension_api::{self as zed, GithubReleaseOptions, Result, latest_github_release};
 
 use crate::utils;
 
@@ -138,27 +136,30 @@ fn download_server(version: String) -> Result<String> {
         }
     );
 
-    if !fs::metadata(&binary_path).is_ok_and(|metadata| metadata.is_file()) {
-        if fs::metadata(&extension_dir).is_ok_and(|metadata| metadata.is_dir()) {
-            fs::remove_dir_all(&extension_dir)
-                .map_err(|e| format!("failed to remove incomplete {extension_dir}: {e}"))?;
-        }
-
-        let downloaded_file_type = match os {
-            zed::Os::Windows | zed::Os::Mac => zed_extension_api::DownloadedFileType::Zip,
-            zed::Os::Linux => zed_extension_api::DownloadedFileType::GzipTar,
-        };
-
-        zed::download_file(&url, &extension_dir, downloaded_file_type)?;
-
-        if !fs::metadata(&binary_path).is_ok_and(|metadata| metadata.is_file()) {
-            return Err(format!(
-                "Kotlin language server binary not found at {binary_path} after downloading {asset_name}; the archive layout may have changed"
-            ));
-        }
-        make_file_executable(&binary_path)?;
-        utils::remove_outdated_versions(KotlinLSP::LANGUAGE_SERVER_ID, &extension_dir)?;
+    if fs::metadata(&extension_dir).is_ok_and(|metadata| metadata.is_dir())
+        && !fs::metadata(&binary_path).is_ok_and(|metadata| metadata.is_file())
+    {
+        fs::remove_dir_all(&extension_dir)
+            .map_err(|e| format!("failed to remove incomplete {extension_dir}: {e}"))?;
     }
+
+    let downloaded_file_type = match os {
+        zed::Os::Windows | zed::Os::Mac => zed_extension_api::DownloadedFileType::Zip,
+        zed::Os::Linux => zed_extension_api::DownloadedFileType::GzipTar,
+    };
+
+    utils::download_and_install(
+        &url,
+        &extension_dir,
+        downloaded_file_type,
+        &binary_path,
+        KotlinLSP::LANGUAGE_SERVER_ID,
+    )
+    .map_err(|e| {
+        format!(
+            "failed to install Kotlin language server: {e}; the archive layout may have changed"
+        )
+    })?;
 
     Ok(binary_path)
 }
