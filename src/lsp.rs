@@ -68,9 +68,6 @@ impl KotlinLSP {
 ///
 /// Fetches the latest release tag from the `Kotlin/kotlin-lsp` GitHub
 /// repository.
-// JetBrains' RELEASES.md is stale (still points to expired 262.x builds),
-// so we use the GitHub releases API as the source of truth.
-// See: https://github.com/Kotlin/kotlin-lsp/issues/271
 fn get_version() -> Result<String> {
     let release = latest_github_release(
         "Kotlin/kotlin-lsp",

@@ -49,11 +49,6 @@ impl zed::Extension for KotlinExtension {
                 let kotlin_lsp = self.kotlin_lsp.get_or_insert_with(KotlinLSP::new);
                 let binary_path = kotlin_lsp.language_server_binary_path(language_server_id)?;
 
-                // Run kotlin-lsp behind kotlin-lsp-proxy, which rewrites archive-internal
-                // (`jar!/`, `zip!/`) source URIs into real files so Go-to-Definition
-                // into library/JDK sources works. If the proxy can't be obtained, fall
-                // back to launching kotlin-lsp directly so core language features keep
-                // working (only library source navigation is affected).
                 let configuration =
                     LspSettings::for_worktree(language_server_id.as_ref(), worktree)
                         .ok()
@@ -66,12 +61,6 @@ impl zed::Extension for KotlinExtension {
                     worktree,
                 ) {
                     Ok(proxy_path) => {
-                        // `binary_path` is relative to the extension's work directory.
-                        // Zed resolves a relative `command` against that directory
-                        // automatically, but does NOT resolve `args` -- so it must be
-                        // made absolute here before being passed as an argument to the
-                        // proxy, otherwise the proxy inherits the *worktree's* cwd and
-                        // fails to find it.
                         let absolute_binary_path = std::env::current_dir()
                             .map(|dir| dir.join(&binary_path))
                             .map(|path| path.to_string_lossy().into_owned())
@@ -116,7 +105,6 @@ impl zed::Extension for KotlinExtension {
             .and_then(|lsp_settings| lsp_settings.settings)
             .unwrap_or_default();
 
-        // `proxy_path` is consumed client-side by the extension; don't forward it.
         if let Some(obj) = settings.as_object_mut() {
             obj.remove("proxy_path");
         }
