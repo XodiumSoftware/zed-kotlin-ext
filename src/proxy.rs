@@ -56,11 +56,19 @@ impl Proxy {
         _worktree: &Worktree,
     ) -> Result<String> {
         if let Some(path) = self.cached_binary_path.as_ref() {
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
             return Ok(path.clone());
         }
 
         if let Some(path) = user_configured_proxy_path(configuration) {
             self.cached_binary_path = Some(path.clone());
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
             return Ok(path);
         }
 
@@ -69,20 +77,29 @@ impl Proxy {
             &zed::LanguageServerInstallationStatus::CheckingForUpdate,
         );
 
-        let release = zed::latest_github_release(
+        let release = match zed::latest_github_release(
             GITHUB_REPO,
             zed::GithubReleaseOptions {
                 require_assets: true,
                 pre_release: false,
             },
-        )
-        .map_err(|err| format!("Failed to fetch kotlin-lsp-proxy release: {err}"))?;
+        ) {
+            Ok(r) => r,
+            Err(e) => {
+                let err = format!("Failed to fetch kotlin-lsp-proxy release: {e}");
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &zed::LanguageServerInstallationStatus::Failed(err.clone()),
+                );
+                return Err(err);
+            }
+        };
 
         let (asset_name, file_type) = asset()?;
         let version_dir = format!("{INSTALL_PREFIX}-{}", release.version);
         let binary_path = format!("{version_dir}/{}", proxy_exec());
 
-        let asset = release
+        let asset = match release
             .assets
             .iter()
             .find(|a| a.name == asset_name)
@@ -91,22 +108,41 @@ impl Proxy {
                     "No kotlin-lsp-proxy asset matching {asset_name:?} in release {}",
                     release.version
                 )
-            })?;
+            }) {
+            Ok(a) => a,
+            Err(e) => {
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &zed::LanguageServerInstallationStatus::Failed(e.clone()),
+                );
+                return Err(e);
+            }
+        };
 
         zed::set_language_server_installation_status(
             language_server_id,
             &zed::LanguageServerInstallationStatus::Downloading,
         );
 
-        utils::download_and_install(
+        if let Err(e) = utils::download_and_install(
             &asset.download_url,
             &version_dir,
             file_type,
             &binary_path,
             INSTALL_PREFIX,
-        )?;
+        ) {
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &zed::LanguageServerInstallationStatus::Failed(e.clone()),
+            );
+            return Err(e);
+        }
 
         self.cached_binary_path = Some(binary_path.clone());
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &zed::LanguageServerInstallationStatus::None,
+        );
         Ok(binary_path)
     }
 }

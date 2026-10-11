@@ -41,6 +41,10 @@ impl KotlinLSP {
         language_server_id: &zed::LanguageServerId,
     ) -> Result<String> {
         if let Some(path) = self.cached_binary_path.as_ref() {
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &zed::LanguageServerInstallationStatus::None,
+            );
             return Ok(path.clone());
         }
 
@@ -48,16 +52,38 @@ impl KotlinLSP {
             language_server_id,
             &zed::LanguageServerInstallationStatus::CheckingForUpdate,
         );
-        let version = get_version()?;
+        let version = match get_version() {
+            Ok(v) => v,
+            Err(e) => {
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &zed::LanguageServerInstallationStatus::Failed(e.clone()),
+                );
+                return Err(e);
+            }
+        };
 
         zed::set_language_server_installation_status(
             language_server_id,
             &zed::LanguageServerInstallationStatus::Downloading,
         );
 
-        let binary_path = download_server(version)?;
+        let binary_path = match download_server(version) {
+            Ok(path) => path,
+            Err(e) => {
+                zed::set_language_server_installation_status(
+                    language_server_id,
+                    &zed::LanguageServerInstallationStatus::Failed(e.clone()),
+                );
+                return Err(e);
+            }
+        };
 
         self.cached_binary_path = Some(binary_path.clone());
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &zed::LanguageServerInstallationStatus::None,
+        );
         Ok(binary_path)
     }
 }
