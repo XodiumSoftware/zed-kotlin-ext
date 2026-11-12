@@ -43,7 +43,7 @@ impl zed::Extension for KotlinExtension {
         &mut self,
         language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
-    ) -> zed::Result<zed::Command> {
+    ) -> Result<zed::Command> {
         match language_server_id.as_ref() {
             KotlinLSP::LANGUAGE_SERVER_ID => {
                 let kotlin_lsp = self.kotlin_lsp.get_or_insert_with(KotlinLSP::new);
@@ -115,4 +115,13 @@ impl zed::Extension for KotlinExtension {
     }
 }
 
-zed::register_extension!(KotlinExtension);
+// The expansion defines the public `init-extension` ffi entry point, which
+// cannot carry docs from this call site; allow it at module scope.
+#[allow(missing_docs)]
+mod registration {
+    use zed_extension_api as zed;
+
+    use crate::KotlinExtension;
+
+    zed::register_extension!(KotlinExtension);
+}

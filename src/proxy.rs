@@ -22,14 +22,14 @@ const GITHUB_REPO: &str = "XodiumSoftware/zed-kotlin-ext";
 
 /// Downloads and caches the `kotlin-lsp-proxy` binary that resolves
 /// archive-internal (`jar!/`, `zip!/`) source URIs returned by kotlin-lsp.
-pub struct Proxy {
+pub(crate) struct Proxy {
     /// Path to a previously resolved proxy binary, if any.
     cached_binary_path: Option<String>,
 }
 
 impl Proxy {
     /// Creates a new manager with no cached binary path.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             cached_binary_path: None,
         }
@@ -49,7 +49,7 @@ impl Proxy {
     ///
     /// Returns an error if no release asset matches the current platform, or
     /// the download or extraction fails.
-    pub fn language_server_binary_path(
+    pub(crate) fn language_server_binary_path(
         &mut self,
         language_server_id: &zed::LanguageServerId,
         configuration: &Option<Value>,

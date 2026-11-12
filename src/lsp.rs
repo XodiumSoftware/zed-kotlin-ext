@@ -10,17 +10,17 @@ use zed_extension_api::{self as zed, GithubReleaseOptions, Result, latest_github
 use crate::utils;
 
 /// Manages the Kotlin LSP installation.
-pub struct KotlinLSP {
+pub(crate) struct KotlinLSP {
     /// Path to a previously resolved server binary, if any.
     cached_binary_path: Option<String>,
 }
 
 impl KotlinLSP {
     /// The language server ID, as registered in `extension.toml`.
-    pub const LANGUAGE_SERVER_ID: &'static str = "kotlin-dev-lsp";
+    pub(crate) const LANGUAGE_SERVER_ID: &'static str = "kotlin-dev-lsp";
 
     /// Creates a new manager with no cached binary path.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         KotlinLSP {
             cached_binary_path: None,
         }
@@ -36,7 +36,7 @@ impl KotlinLSP {
     ///
     /// Returns an error if the server archive cannot be downloaded or
     /// extracted, or the platform is unsupported.
-    pub fn language_server_binary_path(
+    pub(crate) fn language_server_binary_path(
         &mut self,
         language_server_id: &zed::LanguageServerId,
     ) -> Result<String> {
