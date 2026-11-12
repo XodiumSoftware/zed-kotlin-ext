@@ -8,7 +8,7 @@ path = "src/kotlin.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-zed_extension_api = "0.7"
+zed_extension_api = "0.7.0"
 
 [lints.rust]
 missing_docs = "deny"
